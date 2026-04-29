@@ -18,7 +18,10 @@ const httpServer = http.createServer(app);
 // ─────────────────────────────────────────
 // Middleware
 // ─────────────────────────────────────────
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
 app.use(express.json());
 
 // ─────────────────────────────────────────
@@ -26,7 +29,7 @@ app.use(express.json());
 // ─────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -54,7 +57,6 @@ app.get('/api/health', (req, res) => {
 // Initialize DB on startup
 getDb();
 
-httpServer.listen(PORT, () => {
-  console.log(`\n🚀 SyncBoard AI Server running on http://localhost:${PORT}`);
-  console.log(`📡 Socket.IO ready | CORS: ${CLIENT_URL}\n`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on network at http://0.0.0.0:${PORT}`);
 });

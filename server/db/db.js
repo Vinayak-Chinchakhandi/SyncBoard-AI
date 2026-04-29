@@ -13,6 +13,7 @@ function getDb() {
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
     initSchema();
+    runMigrations();
   }
   return db;
 }
@@ -23,4 +24,18 @@ function initSchema() {
   console.log('[DB] Schema initialized');
 }
 
+// Safe migrations — add new columns if they don't exist
+function runMigrations() {
+  try {
+    const cols = db.pragma('table_info(boards)').map((c) => c.name);
+    if (!cols.includes('canvas_data')) {
+      db.exec("ALTER TABLE boards ADD COLUMN canvas_data TEXT DEFAULT '[]'");
+      console.log('[DB] Migration: added canvas_data column');
+    }
+  } catch (err) {
+    console.error('[DB] Migration error:', err.message);
+  }
+}
+
 module.exports = { getDb };
+

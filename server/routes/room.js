@@ -31,11 +31,15 @@ router.post('/create', authMiddleware, (req, res) => {
       'INSERT INTO rooms (room_code, name, created_by) VALUES (?, ?, ?)'
     ).run(roomCode, name, req.user.id);
 
-    // Create a board for this room
-    db.prepare('INSERT INTO boards (room_id, title) VALUES (?, ?)').run(result.lastInsertRowid, name);
+    // Create a board for this room (with empty canvas_data)
+    db.prepare(
+      'INSERT OR IGNORE INTO boards (room_id, title, canvas_data) VALUES (?, ?, ?)'
+    ).run(result.lastInsertRowid, name, '[]');
 
     // Add creator to room_users
-    db.prepare('INSERT INTO room_users (room_id, user_id) VALUES (?, ?)').run(result.lastInsertRowid, req.user.id);
+    db.prepare(
+      'INSERT OR IGNORE INTO room_users (room_id, user_id) VALUES (?, ?)'
+    ).run(result.lastInsertRowid, req.user.id);
 
     res.json({ room: { id: result.lastInsertRowid, roomCode, name } });
   } catch (err) {
@@ -44,20 +48,51 @@ router.post('/create', authMiddleware, (req, res) => {
   }
 });
 
-// GET /api/rooms/:code — get room info
+// GET /api/rooms/my — rooms the current user participated in
+router.get('/my', authMiddleware, (req, res) => {
+  try {
+    const db = getDb();
+    const rooms = db.prepare(`
+      SELECT DISTINCT r.* FROM rooms r
+      JOIN room_users ru ON ru.room_id = r.id
+      WHERE ru.user_id = ?
+      ORDER BY r.created_at DESC
+      LIMIT 20
+    `).all(req.user.id);
+    res.json({ rooms });
+  } catch (err) {
+    console.error('[ROOM] My rooms error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/rooms/validate/:code — validate room exists (used before joining)
+router.get('/validate/:code', authMiddleware, (req, res) => {
+  try {
+    const db = getDb();
+    const room = db.prepare('SELECT id, room_code, name FROM rooms WHERE room_code = ?').get(req.params.code);
+    if (!room) return res.status(404).json({ error: 'Room does not exist' });
+    res.json({ room });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/rooms/:code — get room info + canvas state
 router.get('/:code', authMiddleware, (req, res) => {
   try {
     const db = getDb();
     const room = db.prepare('SELECT * FROM rooms WHERE room_code = ?').get(req.params.code);
-    if (!room) return res.status(404).json({ error: 'Room not found' });
+    if (!room) return res.status(404).json({ error: 'Room does not exist' });
 
-    // Track user in room
-    const existing = db.prepare(
-      'SELECT id FROM room_users WHERE room_id = ? AND user_id = ?'
-    ).get(room.id, req.user.id);
-    if (!existing) {
-      db.prepare('INSERT INTO room_users (room_id, user_id) VALUES (?, ?)').run(room.id, req.user.id);
-    }
+    // Track user in room (insert if not exists)
+    db.prepare(
+      'INSERT OR IGNORE INTO room_users (room_id, user_id) VALUES (?, ?)'
+    ).run(room.id, req.user.id);
+
+    // Get board canvas state
+    const board = db.prepare('SELECT canvas_data FROM boards WHERE room_id = ?').get(room.id);
+    const canvasData = board ? JSON.parse(board.canvas_data || '[]') : [];
 
     const members = db.prepare(`
       SELECT u.username FROM room_users ru
@@ -65,21 +100,41 @@ router.get('/:code', authMiddleware, (req, res) => {
       WHERE ru.room_id = ?
     `).all(room.id);
 
-    res.json({ room, members });
+    res.json({ room, members, canvasData });
   } catch (err) {
     console.error('[ROOM] Get error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET /api/rooms — list all rooms (for demo)
-router.get('/', authMiddleware, (req, res) => {
+// POST /api/rooms/:code/save — save canvas state to DB
+router.post('/:code/save', authMiddleware, (req, res) => {
   try {
+    const { objects } = req.body;
+    if (!Array.isArray(objects)) return res.status(400).json({ error: 'objects array required' });
+
     const db = getDb();
-    const rooms = db.prepare('SELECT * FROM rooms ORDER BY created_at DESC LIMIT 20').all();
-    res.json({ rooms });
+    const room = db.prepare('SELECT id FROM rooms WHERE room_code = ?').get(req.params.code);
+    if (!room) return res.status(404).json({ error: 'Room does not exist' });
+
+    const json = JSON.stringify(objects);
+
+    // Try UPDATE first
+    const updated = db.prepare(
+      'UPDATE boards SET canvas_data = ?, updated_at = CURRENT_TIMESTAMP WHERE room_id = ?'
+    ).run(json, room.id);
+
+    // If no row existed, INSERT
+    if (updated.changes === 0) {
+      db.prepare(
+        'INSERT INTO boards (room_id, title, canvas_data) VALUES (?, ?, ?)'
+      ).run(room.id, req.params.code, json);
+    }
+
+    res.json({ saved: true, count: objects.length });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('[ROOM] Save error:', err);
+    res.status(500).json({ error: 'Server error', detail: err.message });
   }
 });
 

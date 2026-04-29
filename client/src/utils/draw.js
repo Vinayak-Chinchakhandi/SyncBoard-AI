@@ -172,11 +172,13 @@ export function drawRoundedRect(ctx, data) {
 }
 
 /**
- * Clear the entire canvas
+ * Clear the entire canvas — fills with dark background
+ * NOTE: the background fill is intentional so the canvas shows dark,
+ * but eraser objects use destination-out against a transparent layer
+ * stacked above the background. CanvasBoard.redrawAll handles this correctly.
  */
 export function clearCanvas(ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // Fill with dark background
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }

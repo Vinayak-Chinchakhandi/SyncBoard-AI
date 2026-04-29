@@ -4,7 +4,6 @@
  */
 
 import { generateFlowchart } from '../utils/flowchartGenerator';
-import { detectShape } from '../utils/shapeDetection';
 
 const API_BASE = '/api';
 
@@ -20,19 +19,6 @@ const API_BASE = '/api';
  */
 export function generateFlowchartFromText(text, options = {}) {
   return generateFlowchart(text, options);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SHAPE RECOGNITION — Rule-based geometry
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Recognize shape from stroke points
- * @param {Array<{x, y}>} points
- * @returns {{ type, confidence, properties }}
- */
-export function recognizeShape(points) {
-  return detectShape(points);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

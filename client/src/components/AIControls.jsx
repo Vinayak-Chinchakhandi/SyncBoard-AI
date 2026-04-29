@@ -253,14 +253,9 @@ export default function AIControls({ canvasRef, roomCode, userCount, shapeCount 
               ))}
             </div>
             <div className="glass rounded-xl p-3 text-[11px] text-white/50 space-y-1">
-              <p>💡 Shape recognition automatically detects:</p>
-              <ul className="space-y-0.5 pl-3">
-                <li>• Circles and ellipses</li>
-                <li>• Rectangles and squares</li>
-                <li>• Straight lines</li>
-                <li>• Triangles</li>
-              </ul>
-              <p className="mt-2">Draw a shape and it will be auto-corrected!</p>
+              <p>💡 Smart alignment snaps all objects to a 20px grid.</p>
+              <p className="mt-1">Use the <strong className="text-white/70">Select</strong> tool in the toolbar to select and delete objects.</p>
+              <p className="mt-1">Press <kbd className="px-1 py-0.5 glass rounded text-white/60">Del</kbd> to delete a selected object.</p>
             </div>
           </div>
         )}

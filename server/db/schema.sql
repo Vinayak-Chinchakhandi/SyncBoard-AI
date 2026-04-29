@@ -26,11 +26,12 @@ CREATE TABLE IF NOT EXISTS room_users (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Boards table (metadata only, no drawing data stored)
+-- Boards table — stores canvas objects as JSON for persistence
 CREATE TABLE IF NOT EXISTS boards (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  room_id INTEGER NOT NULL,
+  room_id INTEGER NOT NULL UNIQUE,
   title TEXT DEFAULT 'Untitled Board',
+  canvas_data TEXT DEFAULT '[]',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (room_id) REFERENCES rooms(id)
