@@ -77,9 +77,10 @@ SyncBoard AI is a real-time collaborative whiteboard that enables multiple users
 
 ## Contributors
 
-- Your Name  
-- Team Member 2  
-- Team Member 3  
+- Vinayak Chinchakhandi 
+- Soham Sutar
+- Swayam Nagavi
+- Chinmayi Chodankar  
 
 ---
 
